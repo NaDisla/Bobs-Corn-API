@@ -9,38 +9,20 @@ namespace Bobs_Corn_API.Controllers
     public class CornController : ControllerBase
     {
         private readonly TotalsStore _totals;
-
-        public CornController(TotalsStore totals)
+        private readonly ClientKeyResolver _resolver;
+        public CornController(TotalsStore totals, ClientKeyResolver resolver)
         {
             _totals = totals;
+            _resolver = resolver;
         }
 
         [HttpPost("buy")]
         [EnableRateLimiting("per-client-1-per-minute")]
         public IActionResult Buy()
         {
-            var clientId = GetClientId(HttpContext);
+            var clientId = _resolver.Resolve(HttpContext);
             var total = _totals.Increment(clientId);
-
-            return Ok(new
-            {
-                message = "🌽",
-                clientId,
-                totalBought = total,
-                timestamp = DateTime.UtcNow
-            });
-        }
-
-        private static string GetClientId(HttpContext ctx)
-        {
-            if (ctx.Request.Headers.TryGetValue("X-Client-Id", out var values) &&
-                !string.IsNullOrWhiteSpace(values.ToString()))
-            {
-                return values.ToString();
-            }
-
-            var ip = ctx.Connection.RemoteIpAddress?.ToString();
-            return string.IsNullOrWhiteSpace(ip) ? "anonymous" : ip!;
+            return Ok(new { message = "🌽", clientId, totalBought = total, timestamp = DateTime.UtcNow });
         }
     }
 }

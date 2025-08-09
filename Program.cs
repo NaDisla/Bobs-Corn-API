@@ -22,6 +22,7 @@ namespace Bobs_Corn_API
 
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddSingleton<TotalsStore>();
+            builder.Services.AddSingleton<ClientKeyResolver>();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -42,7 +43,8 @@ namespace Bobs_Corn_API
 
                 options.AddPolicy("per-client-1-per-minute", httpContext =>
                 {
-                    string clientKey = GetClientKey(httpContext);
+                    var resolver = httpContext.RequestServices.GetRequiredService<ClientKeyResolver>();
+                    var clientKey = resolver.Resolve(httpContext);
                     return RateLimitPartition.GetFixedWindowLimiter(
                         partitionKey: clientKey,
                         factory: _ => new FixedWindowRateLimiterOptions
@@ -74,18 +76,6 @@ namespace Bobs_Corn_API
             app.MapControllers();
 
             app.Run();
-
-            static string GetClientKey(HttpContext ctx)
-            {
-                if (ctx.Request.Headers.TryGetValue("X-Client-Id", out var values) &&
-                    !string.IsNullOrWhiteSpace(values.ToString()))
-                {
-                    return values.ToString();
-                }
-
-                var ip = ctx.Connection.RemoteIpAddress?.ToString();
-                return string.IsNullOrWhiteSpace(ip) ? "anonymous" : ip!;
-            }
         }
     }
 }
