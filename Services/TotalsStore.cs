@@ -8,8 +8,5 @@ namespace Bobs_Corn_API.Services
 
         public int Increment(string clientKey)
             => _totals.AddOrUpdate(clientKey, 1, (_, prev) => prev + 1);
-
-        public int Get(string clientKey)
-            => _totals.TryGetValue(clientKey, out var v) ? v : 0;
     }
 }
